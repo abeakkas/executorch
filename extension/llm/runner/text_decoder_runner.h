@@ -14,7 +14,6 @@
 #include <executorch/extension/module/module.h>
 #include <executorch/extension/tensor/tensor.h>
 #include <executorch/runtime/platform/compiler.h>
-#include <functional>
 
 namespace executorch {
 namespace extension {
