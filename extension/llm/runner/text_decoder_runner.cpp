@@ -21,7 +21,9 @@ namespace llm {
 // NOTE: we observed ~2x loading performance increase on iPhone 15
 // and a ~5% improvement on Galaxy S22 by switching to
 // FileDataLoader instead of MmapDataLoader + UseMlockIgnoreErrors.
-TextDecoderRunner::TextDecoderRunner(Module* module, bool use_kv_cache)
+TextDecoderRunner::TextDecoderRunner(
+    std::shared_ptr<Module> module,
+    bool use_kv_cache)
     : module_(module), use_kv_cache_(use_kv_cache) {}
 
 // This function is functional, meaning it shouldn't modify any state of the

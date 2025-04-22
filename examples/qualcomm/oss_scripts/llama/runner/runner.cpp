@@ -191,7 +191,7 @@ Error Runner::load() {
   }
 
   // llama3 tokenizer
-  tokenizer_ = example::get_tiktoken_for_llama();
+  tokenizer_ = example::get_tiktoken_for_llama<decltype(tokenizer_)>();
   auto err = tokenizer_->load(tokenizer_path_);
   if (err != tokenizers::Error::Ok) {
     ET_LOG(

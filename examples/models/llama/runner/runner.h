@@ -60,18 +60,18 @@ class ET_EXPERIMENTAL Runner : public executorch::extension::llm::IRunner {
   bool shouldStop_{false};
 
   // model
-  std::unique_ptr<::executorch::extension::Module> module_;
+  std::shared_ptr<::executorch::extension::Module> module_;
   std::string tokenizer_path_;
-  std::unique_ptr<::tokenizers::Tokenizer> tokenizer_;
+  std::shared_ptr<::tokenizers::Tokenizer> tokenizer_;
   std::unordered_map<std::string, int64_t> metadata_;
-  std::unique_ptr<::executorch::extension::llm::TextDecoderRunner>
+  std::shared_ptr<::executorch::extension::llm::TextDecoderRunner>
       text_decoder_runner_;
   std::unique_ptr<::executorch::extension::llm::TextPrefiller> text_prefiller_;
   std::unique_ptr<::executorch::extension::llm::TextTokenGenerator>
       text_token_generator_;
 
   // stats
-  ::executorch::extension::llm::Stats stats_;
+  std::shared_ptr<::executorch::extension::llm::Stats> stats_;
 
   // temperature.
   // Deprecated, we should rely on the temperature in GenerationConfig instead.

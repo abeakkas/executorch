@@ -17,7 +17,8 @@ namespace example {
 class ET_EXPERIMENTAL LlavaTextDecoderRunner
     : public executorch::extension::llm::TextDecoderRunner {
  public:
-  explicit LlavaTextDecoderRunner(executorch::extension::Module* module)
+  explicit LlavaTextDecoderRunner(
+      std::shared_ptr<executorch::extension::Module> module)
       : TextDecoderRunner(module, true) {}
 
   inline executorch::runtime::Result<executorch::aten::Tensor> step(

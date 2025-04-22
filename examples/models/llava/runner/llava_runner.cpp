@@ -40,40 +40,41 @@ Error LlavaRunner::load() {
   if (is_loaded()) {
     return Error::Ok;
   }
-  stats_.model_load_start_ms = llm::time_in_ms();
+  stats_->model_load_start_ms = llm::time_in_ms();
 
   // Load the tokenizer
-  tokenizer_ = std::make_unique<tokenizers::Llama2cTokenizer>();
+  tokenizer_ = std::make_shared<tokenizers::Llama2cTokenizer>();
   tokenizer_->load(tokenizer_path_);
 
   // Load the text decoder runner
   text_decoder_runner_ =
       // @lint-ignore CLANGTIDY facebook-hte-Deprecated
-      std::make_unique<LlavaTextDecoderRunner>(module_.get());
+      std::make_shared<LlavaTextDecoderRunner>(module_);
   // @lint-ignore CLANGTIDY facebook-hte-Deprecated
   text_decoder_runner_->load();
 
   // Load the text prefiller
   text_prefiller_ = std::make_unique<llm::TextPrefiller>(
-      text_decoder_runner_.get(),
+      text_decoder_runner_,
       /*use_kv_cache=*/true,
       /*enable_parallel_prefill=*/true,
       /*max_seq_len=*/128);
 
   // Load the image prefiller
-  image_prefiller_ = std::make_unique<LlavaImagePrefiller>(module_.get());
+  image_prefiller_ = std::make_unique<LlavaImagePrefiller>(module_);
   image_prefiller_->load();
 
   // Load the text token generator
+  stats_ = std::make_shared<llm::Stats>();
   text_token_generator_ = std::make_unique<llm::TextTokenGenerator>(
-      tokenizer_.get(),
-      text_decoder_runner_.get(),
+      tokenizer_,
+      text_decoder_runner_,
       /*use_kv_cache=*/true,
       std::make_unique<std::unordered_set<uint64_t>>(
           std::unordered_set<uint64_t>{tokenizer_->eos_tok()}),
-      &stats_);
+      stats_);
 
-  stats_.model_load_end_ms = llm::time_in_ms();
+  stats_->model_load_end_ms = llm::time_in_ms();
   return Error::Ok;
 }
 
@@ -113,9 +114,9 @@ Error LlavaRunner::generate_from_pos(
 
   uint64_t prefill_next_token =
       ET_UNWRAP(prefill_prompt(prompt, start_pos, /*bos=*/0, /*eos*/ 0));
-  stats_.first_token_ms = llm::time_in_ms();
-  stats_.prompt_eval_end_ms = llm::time_in_ms();
-  stats_.num_prompt_tokens = start_pos;
+  stats_->first_token_ms = llm::time_in_ms();
+  stats_->prompt_eval_end_ms = llm::time_in_ms();
+  stats_->num_prompt_tokens = start_pos;
 
   // Generate tokens
   int64_t num_generated_tokens = ET_UNWRAP(text_token_generator_->generate(
@@ -126,9 +127,9 @@ Error LlavaRunner::generate_from_pos(
       /*token_callback=*/token_callback));
 
   // Bookkeeping
-  stats_.num_generated_tokens = num_generated_tokens;
+  stats_->num_generated_tokens = num_generated_tokens;
   if (stats_callback) {
-    stats_callback(stats_);
+    stats_callback(*stats_);
   }
   return Error::Ok;
 }
@@ -161,7 +162,7 @@ Error LlavaRunner::generate(
       };
 
   int64_t pos = 0;
-  stats_.inference_start_ms = llm::time_in_ms();
+  stats_->inference_start_ms = llm::time_in_ms();
 
   // prefill preset prompt
   prefill_prompt(kPresetPrompt, pos, /*bos=*/1, /*eos*/ 0);
@@ -178,8 +179,8 @@ Error LlavaRunner::generate(
   Error err = generate_from_pos(
       prompt, seq_len, pos, wrapped_callback, stats_callback, echo);
 
-  stats_.inference_end_ms = llm::time_in_ms();
-  ::executorch::llm::print_report(stats_);
+  stats_->inference_end_ms = llm::time_in_ms();
+  ::executorch::llm::print_report(*stats_);
 
   ET_LOG(
       Info,

@@ -21,7 +21,8 @@ namespace llm {
 // Assuming kv cache and parallel prefill are enabled.
 class ET_EXPERIMENTAL ImagePrefiller {
  public:
-  explicit ImagePrefiller(::executorch::extension::Module* module)
+  explicit ImagePrefiller(
+      std::shared_ptr<::executorch::extension::Module> module)
       : module_(module) {}
 
   /**
@@ -41,7 +42,7 @@ class ET_EXPERIMENTAL ImagePrefiller {
   virtual ~ImagePrefiller() = default;
 
  protected:
-  Module* module_;
+  std::shared_ptr<Module> module_;
 };
 
 } // namespace llm

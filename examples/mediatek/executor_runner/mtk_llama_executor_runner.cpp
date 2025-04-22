@@ -287,7 +287,7 @@ std::unique_ptr<Tokenizer> load_tokenizer() {
   if (FLAGS_tokenizer_type == "bpe") {
     tokenizer = std::make_unique<BPETokenizer>();
   } else if (FLAGS_tokenizer_type == "tiktoken") {
-    tokenizer = example::get_tiktoken_for_llama();
+    tokenizer = example::get_tiktoken_for_llama<decltype(tokenizer)>();
   }
   ET_CHECK_MSG(
       tokenizer, "Invalid tokenizer type: %s", FLAGS_tokenizer_type.c_str());

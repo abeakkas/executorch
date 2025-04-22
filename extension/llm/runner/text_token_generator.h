@@ -21,16 +21,18 @@ namespace llm {
 class ET_EXPERIMENTAL TextTokenGenerator {
  public:
   TextTokenGenerator(
-      ::tokenizers::Tokenizer* tokenizer,
-      TextDecoderRunner* text_decoder_runner,
+      std::shared_ptr<::tokenizers::Tokenizer> tokenizer,
+      std::shared_ptr<TextDecoderRunner> text_decoder_runner,
       bool use_kv_cache,
       std::unique_ptr<std::unordered_set<uint64_t>>&& eos_ids,
-      Stats* stats)
+      std::shared_ptr<Stats> stats)
       : tokenizer_(tokenizer),
         text_decoder_runner_(text_decoder_runner),
         eos_ids_(std::move(eos_ids)),
         use_kv_cache_(use_kv_cache),
         stats_(stats) {}
+
+  virtual ~TextTokenGenerator() = default;
 
   /**
    * Token generation loop.
@@ -136,8 +138,8 @@ class ET_EXPERIMENTAL TextTokenGenerator {
   }
 
  private:
-  ::tokenizers::Tokenizer* tokenizer_;
-  TextDecoderRunner* text_decoder_runner_;
+  std::shared_ptr<::tokenizers::Tokenizer> tokenizer_;
+  std::shared_ptr<TextDecoderRunner> text_decoder_runner_;
   std::unique_ptr<std::unordered_set<uint64_t>> eos_ids_;
   bool use_kv_cache_;
 
@@ -145,7 +147,7 @@ class ET_EXPERIMENTAL TextTokenGenerator {
   bool should_stop_ = false;
 
   // stats
-  Stats* stats_;
+  std::shared_ptr<Stats> stats_;
 };
 
 } // namespace llm

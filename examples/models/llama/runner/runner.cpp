@@ -52,12 +52,13 @@ Runner::Runner(
           {kMaxContextLen, 128},
           {kUseKVCache, true},
           {kUseSDPAWithKVCache, false},
-      }) {
+      }),
+      stats_(std::make_shared<llm::Stats>()) {
   if (data_path.has_value()) {
-    module_ = std::make_unique<Module>(
+    module_ = std::make_shared<Module>(
         model_path, data_path.value(), Module::LoadMode::File);
   } else {
-    module_ = std::make_unique<Module>(model_path, Module::LoadMode::File);
+    module_ = std::make_shared<Module>(model_path, Module::LoadMode::File);
   }
   ET_LOG(
       Info,
@@ -89,7 +90,7 @@ Error Runner::load() {
   ET_CHECK_OK_OR_RETURN_ERROR(module_->load_method("forward"));
   // load tokenizer. Assuming tiktoken is the default tokenizer
   tokenizer_ = nullptr;
-  tokenizer_ = get_tiktoken_for_llama();
+  tokenizer_ = get_tiktoken_for_llama<decltype(tokenizer_)>();
   ::tokenizers::Error err = tokenizer_->load(tokenizer_path_);
   // Rely on tiktoken to throw error if the artifact is incompatible. Then we
   // fallback to BPE tokenizer.
@@ -99,7 +100,7 @@ Error Runner::load() {
         "Failed to load %s as a Tiktoken artifact, trying BPE tokenizer",
         tokenizer_path_.c_str());
     tokenizer_.reset();
-    tokenizer_ = std::make_unique<::tokenizers::Llama2cTokenizer>();
+    tokenizer_ = std::make_shared<::tokenizers::Llama2cTokenizer>();
     err = tokenizer_->load(tokenizer_path_);
     ET_CHECK_TK_OK_OR_RETURN_ERROR(
         err,
@@ -143,20 +144,20 @@ Error Runner::load() {
     }
   }
   // @lint-ignore CLANGTIDY facebook-hte-Deprecated
-  text_decoder_runner_ = std::make_unique<llm::TextDecoderRunner>(
-      module_.get(), metadata_.at(kUseKVCache));
+  text_decoder_runner_ = std::make_shared<llm::TextDecoderRunner>(
+      module_, metadata_.at(kUseKVCache));
   text_prefiller_ = std::make_unique<llm::TextPrefiller>(
-      text_decoder_runner_.get(),
+      text_decoder_runner_,
       metadata_.at(kUseKVCache),
       metadata_.at(kEnableDynamicShape),
       metadata_.at(kMaxSeqLen));
 
   text_token_generator_ = std::make_unique<llm::TextTokenGenerator>(
-      tokenizer_.get(),
-      text_decoder_runner_.get(),
+      tokenizer_,
+      text_decoder_runner_,
       metadata_.at(kUseKVCache),
       std::move(eos_ids),
-      &stats_);
+      stats_);
 
   return Error::Ok;
 }
@@ -178,9 +179,9 @@ Error Runner::generate(
   // Use ones-initialized inputs.
   ET_CHECK_MSG(!prompt.empty(), "Prompt cannot be null");
   if (!is_loaded()) {
-    stats_.model_load_start_ms = llm::time_in_ms();
+    stats_->model_load_start_ms = llm::time_in_ms();
     ET_CHECK_OK_OR_RETURN_ERROR(load());
-    stats_.model_load_end_ms = llm::time_in_ms();
+    stats_->model_load_end_ms = llm::time_in_ms();
   }
 
   if (config.warming) {
@@ -206,7 +207,7 @@ Error Runner::generate(
   // First token time only measures the time it takes to encode the prompt and
   // return a response token.
 
-  stats_.inference_start_ms = llm::time_in_ms();
+  stats_->inference_start_ms = llm::time_in_ms();
   shouldStop_ = false;
 
   ::tokenizers::Result<std::vector<uint64_t>> encode_res = tokenizer_->encode(
@@ -247,8 +248,8 @@ Error Runner::generate(
   auto prefill_res = text_prefiller_->prefill(prompt_tokens, pos);
   ET_CHECK_OK_OR_RETURN_ERROR(prefill_res.error());
   uint64_t cur_token = prefill_res.get();
-  stats_.first_token_ms = llm::time_in_ms();
-  stats_.prompt_eval_end_ms = llm::time_in_ms();
+  stats_->first_token_ms = llm::time_in_ms();
+  stats_->prompt_eval_end_ms = llm::time_in_ms();
 
   // print the first token from prefill. No prev_token so use cur_token for it.
   wrapped_callback(
@@ -269,7 +270,7 @@ Error Runner::generate(
       temperature_ == -1.0f ? config.temperature : temperature_,
       wrapped_callback));
 
-  stats_.inference_end_ms = llm::time_in_ms();
+  stats_->inference_end_ms = llm::time_in_ms();
   if (!config.warming) {
     printf("\n");
   }
@@ -282,17 +283,17 @@ Error Runner::generate(
     RUNNER_ET_LOG(config.warming, "Max new tokens %i reached!", max_new_tokens);
   }
 
-  stats_.num_prompt_tokens = num_prompt_tokens;
-  stats_.num_generated_tokens = num_generated_tokens;
+  stats_->num_prompt_tokens = num_prompt_tokens;
+  stats_->num_generated_tokens = num_generated_tokens;
 
   if (config.warming) {
     ET_LOG(Info, "Warmup run finished!");
   } else {
     // Do not print report during warmup
-    ::executorch::llm::print_report(stats_);
+    ::executorch::llm::print_report(*stats_);
   }
   if (stats_callback) {
-    stats_callback(stats_);
+    stats_callback(*stats_);
   }
 
   return Error::Ok;
@@ -307,7 +308,7 @@ Error Runner::warmup(const std::string& prompt, int32_t max_new_tokens) {
   Error err = generate(prompt, config);
 
   // Reset stats after warmup
-  stats_.reset();
+  stats_->reset();
   return err;
 }
 

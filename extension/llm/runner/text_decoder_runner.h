@@ -14,7 +14,6 @@
 #include <executorch/extension/module/module.h>
 #include <executorch/extension/tensor/tensor.h>
 #include <executorch/runtime/platform/compiler.h>
-#include <functional>
 
 namespace executorch {
 namespace extension {
@@ -22,7 +21,7 @@ namespace llm {
 
 class ET_EXPERIMENTAL TextDecoderRunner {
  public:
-  TextDecoderRunner(Module* module, bool use_kv_cache);
+  TextDecoderRunner(std::shared_ptr<Module> module, bool use_kv_cache);
 
   virtual ~TextDecoderRunner() = default;
 
@@ -94,8 +93,7 @@ class ET_EXPERIMENTAL TextDecoderRunner {
   }
 
  protected:
-  // TODO: use shared_ptr for module
-  Module* module_;
+  std::shared_ptr<Module> module_;
   bool use_kv_cache_;
   bool should_stop_{false};
 };

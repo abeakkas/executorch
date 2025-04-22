@@ -40,7 +40,7 @@ class ET_EXPERIMENTAL MultimodalRunner {
       const std::string& tokenizer_path,
       const float temperature = 0.8f)
       : temperature_(temperature),
-        module_(std::make_unique<Module>(model_path, Module::LoadMode::File)),
+        module_(std::make_shared<Module>(model_path, Module::LoadMode::File)),
         tokenizer_path_(tokenizer_path) {
     ET_LOG(
         Info,
@@ -123,16 +123,16 @@ class ET_EXPERIMENTAL MultimodalRunner {
 
   // model
   std::unordered_set<std::string> model_methods_;
-  std::unique_ptr<Module> module_;
-  std::unique_ptr<TextDecoderRunner> text_decoder_runner_;
+  std::shared_ptr<Module> module_;
+  std::shared_ptr<TextDecoderRunner> text_decoder_runner_;
   std::unique_ptr<TextPrefiller> text_prefiller_;
   std::unique_ptr<ImagePrefiller> image_prefiller_;
   std::unique_ptr<TextTokenGenerator> text_token_generator_;
   std::string tokenizer_path_;
-  std::unique_ptr<::tokenizers::Tokenizer> tokenizer_;
+  std::shared_ptr<::tokenizers::Tokenizer> tokenizer_;
 
   // stats
-  Stats stats_;
+  std::shared_ptr<Stats> stats_;
 };
 
 } // namespace llm

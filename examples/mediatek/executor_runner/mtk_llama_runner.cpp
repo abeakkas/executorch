@@ -292,7 +292,7 @@ Error MTKLlamaRunner::inference(
 std::unique_ptr<Tokenizer> MTKLlamaRunner::load_tokenizer() {
   std::unique_ptr<Tokenizer> tokenizer;
   // Assumes that tokenizer type is Tiktoken
-  tokenizer = example::get_tiktoken_for_llama();
+  tokenizer = example::get_tiktoken_for_llama<decltype(tokenizer)>();
   tokenizer->load(modelpaths_.tokenizer_path);
   return tokenizer;
 }

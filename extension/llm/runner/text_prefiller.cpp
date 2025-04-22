@@ -17,7 +17,7 @@ namespace extension {
 namespace llm {
 
 TextPrefiller::TextPrefiller(
-    TextDecoderRunner* text_decoder_runner,
+    std::shared_ptr<TextDecoderRunner> text_decoder_runner,
     bool use_kv_cache,
     bool enable_parallel_prefill,
     int64_t max_seq_len)
